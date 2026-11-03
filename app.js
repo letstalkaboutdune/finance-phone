@@ -167,11 +167,13 @@ function eventList(events) {
 function renderForecast(body) {
   const cash = data.cash;
   if (!cash) return void card(body, "<p class='muted'>No checking or savings balance yet.</p>");
-  const today = isoToday();
-  const c = card(body, `<h2>Checking + savings</h2><p class="muted">Forecast from ${shortDate(cash.as_of)} to ${shortDate(cash.end, true)}.</p><div class="chart"></div>`);
-  lineChart(c.querySelector(".chart"), cash.daily, { min: cash.min_cents, marker: today, height: 220 });
+  // From today on: the days since the last balance are behind you (Today's note says how old it is).
+  const today = isoToday(), days = cash.daily.filter(([d]) => d >= today);
+  if (!days.length) return void card(body, "<p class='muted'>The forecast ends before today. Export again from the computer.</p>");
+  const c = card(body, `<h2>Checking + savings</h2><p class="muted">Today to ${shortDate(cash.end, true)}, from balances as of ${shortDate(cash.as_of)}.</p><div class="chart"></div>`);
+  lineChart(c.querySelector(".chart"), days, { min: cash.min_cents, height: 220 });
   const byMonth = new Map();
-  for (const e of cash.events.filter((e) => e.date >= cash.as_of)) {
+  for (const e of cash.events.filter((e) => e.date >= today)) {
     const k = e.date.slice(0, 7);
     if (!byMonth.has(k)) byMonth.set(k, []);
     byMonth.get(k).push(e);
@@ -266,7 +268,7 @@ function tooltip(container) {
   return tip;
 }
 
-function lineChart(container, points, { min = null, marker = null, height = 200 } = {}) {
+function lineChart(container, points, { min = null, height = 200 } = {}) {
   const w = container.clientWidth || 320, pad = { l: 44, r: 8, t: 8, b: 22 };
   const vals = points.map((p) => p[1]).concat(min == null ? [] : [min]);
   const ticks = niceTicks(Math.min(...vals), Math.max(...vals));
@@ -285,8 +287,6 @@ function lineChart(container, points, { min = null, marker = null, height = 200 
     lastMonth = m;
   });
   if (min != null) svg += `<line class="min" x1="${pad.l}" x2="${w - pad.r}" y1="${y(min)}" y2="${y(min)}"/><text class="axis" x="${w - pad.r}" y="${y(min) - 4}" text-anchor="end">Minimum</text>`;
-  const mi = marker ? points.findIndex((p) => p[0] >= marker) : -1;
-  if (mi > 0) svg += `<line class="marker" x1="${x(mi)}" x2="${x(mi)}" y1="${pad.t}" y2="${height - pad.b}"/><text class="axis" x="${x(mi) + 4}" y="${pad.t + 10}">Today</text>`;
   svg += `<path class="line" d="${points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join("")}"/>`;
   svg += `<line class="cross" style="display:none" y1="${pad.t}" y2="${height - pad.b}"/><circle class="dot" r="4" style="display:none"/></svg>`;
   container.innerHTML = svg;
