@@ -1,7 +1,7 @@
 // The phone page (docs/MOBILE.md): open a snapshot file from the Syncthing folder, unlock it, show it.
 // The encrypted file is kept in IndexedDB so the page opens without picking it again; the key only if asked.
 import {
-  daysBetween, decrypt, deriveKey, firstBreach, isoToday, lowFrom, money, monthName, parseEnvelope, pct,
+  daysBetween, decrypt, deriveKey, firstBreach, isoToday, lowFrom, money, monthName, niceTicks, parseEnvelope, pct,
   shortDate, shortMoney, spare, upcoming,
 } from "./core.js";
 
@@ -161,7 +161,7 @@ function renderToday(body) {
 function eventList(events) {
   return `<ul class="list">${events.map((e) => `<li><span class="date">${shortDate(e.date)}</span>
     <span class="name">${esc(e.name)}${e.note ? `<small>${esc(e.note)}</small>` : ""}</span>
-    <span class="amt ${e.cents > 0 ? "in" : ""}">${money(e.cents, true)}<small>${money(e.balance_cents)}</small></span></li>`).join("")}</ul>`;
+    <span class="amt ${e.cents > 0 ? "in" : "out"}">${money(e.cents, true)}<small>${money(e.balance_cents)}</small></span></li>`).join("")}</ul>`;
 }
 
 function renderForecast(body) {
@@ -211,35 +211,52 @@ function renderWealth(body) {
   }
 }
 
+const WINDOW = 6;            // months in the chart and the list, ending at the chosen one
+let monthIdx = null;         // the chosen month (index into data.months); null = the latest
+let monthFirst = null;       // the first month in the chart
+
 function renderMonths(body) {
   const months = data.months;
   if (!months.length) return void card(body, "<p class='muted'>No closed months with transactions yet.</p>");
-  const last = months[months.length - 1];
-  const budget = data.budget_cents;
-  card(body, `<h2>${monthName(last.month)} in detail</h2><ul class="list">
-    <li><span class="name">Income</span><span class="amt">${money(last.income_cents)}</span></li>
-    <li><span class="name">Expenses${budget ? `<small>of ${money(budget)} budget: ${money(Math.abs(budget - last.expense_cents))} ${budget >= last.expense_cents ? "under" : "over"}</small>` : ""}</span><span class="amt">${money(last.expense_cents)}</span></li>
-    <li><span class="name">Investments</span><span class="amt">${money(last.investments_cents)}</span></li>
-    <li><span class="name">Taxes</span><span class="amt">${money(last.taxes_cents)}</span></li>
-    <li><span class="name">Savings rate</span><span class="amt">${pct(last.savings_rate, 1)}</span></li></ul>`);
+  if (monthIdx === null || monthIdx >= months.length) monthIdx = months.length - 1;
+  const m = months[monthIdx], budget = data.budget_cents;
+  const label = (x) => `${monthName(x.month)} ${x.month.slice(0, 4)}`;
+  const detail = card(body, `<div class="picker">
+      <button type="button" class="button small" data-step="-1" aria-label="Earlier month" ${monthIdx === 0 ? "disabled" : ""}>‹</button>
+      <h2>${label(m)}</h2>
+      <button type="button" class="button small" data-step="1" aria-label="Later month" ${monthIdx === months.length - 1 ? "disabled" : ""}>›</button></div>
+    <ul class="list">
+    <li><span class="name">Income</span><span class="amt">${money(m.income_cents)}</span></li>
+    <li><span class="name">Expenses${budget ? `<small>of ${money(budget)} budget: ${money(Math.abs(budget - m.expense_cents))} ${budget >= m.expense_cents ? "under" : "over"}</small>` : ""}</span><span class="amt">${money(m.expense_cents)}</span></li>
+    <li><span class="name">Investments</span><span class="amt">${money(m.investments_cents)}</span></li>
+    <li><span class="name">Taxes</span><span class="amt">${money(m.taxes_cents)}</span></li>
+    <li><span class="name">Savings rate</span><span class="amt">${pct(m.savings_rate, 1)}</span></li></ul>`);
+  detail.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => pickMonth(monthIdx + Number(b.dataset.step))));
+
+  // The window stays put while the chosen month is inside it, and slides just enough when it isn't.
+  if (monthFirst === null || monthIdx < monthFirst || monthIdx >= monthFirst + WINDOW) {
+    monthFirst = monthFirst !== null && monthIdx < monthFirst ? monthIdx : monthIdx - WINDOW + 1;
+  }
+  const first = monthFirst = Math.max(0, Math.min(monthFirst, months.length - WINDOW));
+  const shown = months.slice(first, first + WINDOW);
   const c = card(body, `<h2>Income vs expenses</h2>
-    <div class="legend"><span><i class="sw income"></i>Income</span><span><i class="sw expense"></i>Expenses</span></div><div class="chart"></div>`);
-  pairedBars(c.querySelector(".chart"), months);
-  card(body, `<h2>By month</h2><ul class="list">${months.slice().reverse().map((m) =>
-    `<li><span class="name">${monthName(m.month)} ${m.month.slice(0, 4)}<small>Savings rate ${pct(m.savings_rate, 1)}</small></span>
-     <span class="amt">${money(m.income_cents)}<small>${money(m.expense_cents)} spent</small></span></li>`).join("")}</ul>`);
+    <div class="legend"><span><i class="sw income"></i>Income</span><span><i class="sw expense"></i>Expenses</span><span class="muted">Tap a month</span></div><div class="chart"></div>`);
+  pairedBars(c.querySelector(".chart"), shown, monthIdx - first, (i) => pickMonth(first + i));
+  const list = card(body, `<h2>By month</h2><ul class="list">${shown.map((x, i) => [x, first + i]).reverse().map(([x, i]) =>
+    `<li data-i="${i}" class="pick${i === monthIdx ? " chosen" : ""}"><span class="name">${label(x)}<small>Savings rate ${pct(x.savings_rate, 1)}</small></span>
+     <span class="amt">${money(x.income_cents)}<small>${money(x.expense_cents)} spent</small></span></li>`).join("")}</ul>`);
+  list.querySelectorAll("[data-i]").forEach((li) => li.addEventListener("click", () => pickMonth(Number(li.dataset.i))));
+}
+
+function pickMonth(i) {
+  monthIdx = Math.max(0, Math.min(data.months.length - 1, i));
+  const y = window.scrollY;
+  render();
+  window.scrollTo(0, y);
 }
 
 // ----- charts (docs/UI_REDESIGN.md conventions: 2px lines, recessive grid, crosshair on touch) -----
 const SVG = "http://www.w3.org/2000/svg";
-
-function niceTicks(lo, hi, count = 3) {
-  const step0 = (hi - lo) / count || 1, mag = 10 ** Math.floor(Math.log10(step0));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= step0);
-  const ticks = [];
-  for (let v = Math.floor(lo / step) * step; v <= hi + step / 2; v += step) ticks.push(v);
-  return ticks;
-}
 
 function tooltip(container) {
   const tip = document.createElement("div");
@@ -289,7 +306,7 @@ function lineChart(container, points, { min = null, marker = null, height = 200 
   el.addEventListener("pointerleave", () => { cross.style.display = dot.style.display = "none"; tip.hidden = true; });
 }
 
-function pairedBars(container, months, height = 180) {
+function pairedBars(container, months, chosen, onPick, height = 180) {
   const w = container.clientWidth || 320, pad = { l: 44, r: 8, t: 8, b: 22 };
   const ticks = niceTicks(0, Math.max(...months.flatMap((m) => [m.income_cents, m.expense_cents])));
   const hi = ticks[ticks.length - 1];
@@ -297,25 +314,18 @@ function pairedBars(container, months, height = 180) {
   const slot = (w - pad.l - pad.r) / months.length, bar = Math.min(18, (slot - 12) / 2);
   let svg = `<svg width="${w}" height="${height}" role="img" aria-label="Income and expenses by month">`;
   for (const t of ticks) svg += `<line class="grid" x1="${pad.l}" x2="${w - pad.r}" y1="${y(t)}" y2="${y(t)}"/><text class="axis" x="${pad.l - 6}" y="${y(t) + 4}" text-anchor="end">${shortMoney(t)}</text>`;
-  const rounded = (x0, v, cls, i) => {
-    const top = y(v), base = y(0), r = Math.min(4, (base - top) / 2, bar / 2);
-    return `<path class="${cls}" data-i="${i}" d="M${x0},${base}V${top + r}Q${x0},${top} ${x0 + r},${top}H${x0 + bar - r}Q${x0 + bar},${top} ${x0 + bar},${top + r}V${base}Z"/>`;
+  const rounded = (x0, v, cls) => {
+    const top = y(v), base = y(0), r = Math.max(0, Math.min(4, (base - top) / 2, bar / 2));
+    return `<path class="${cls}" d="M${x0},${base}V${top + r}Q${x0},${top} ${x0 + r},${top}H${x0 + bar - r}Q${x0 + bar},${top} ${x0 + bar},${top + r}V${base}Z"/>`;
   };
   months.forEach((m, i) => {
-    const cx = pad.l + slot * (i + 0.5);
-    svg += rounded(cx - bar - 1, m.income_cents, "income", i) + rounded(cx + 1, m.expense_cents, "expense", i);
-    svg += `<rect class="hit" data-i="${i}" x="${cx - slot / 2}" y="${pad.t}" width="${slot}" height="${height - pad.t - pad.b}"/>`;
-    svg += `<text class="axis" x="${cx}" y="${height - 6}" text-anchor="middle">${monthName(m.month)}</text>`;
+    const cx = pad.l + slot * (i + 0.5), dim = i === chosen ? "" : " dim";
+    svg += rounded(cx - bar - 1, m.income_cents, "income" + dim) + rounded(cx + 1, m.expense_cents, "expense" + dim);
+    svg += `<rect class="hit" data-i="${i}" x="${cx - slot / 2}" y="${pad.t}" width="${slot}" height="${height - pad.t}"/>`;
+    svg += `<text class="axis${i === chosen ? " chosen" : ""}" x="${cx}" y="${height - 6}" text-anchor="middle">${monthName(m.month)}</text>`;
   });
   container.innerHTML = svg + "</svg>";
-  const tip = tooltip(container);
-  container.querySelectorAll(".hit").forEach((h) => h.addEventListener("pointerdown", () => {
-    const m = months[h.dataset.i];
-    tip.innerHTML = `${monthName(m.month)} ${m.month.slice(0, 4)}<b>Income ${money(m.income_cents)}</b><b>Expenses ${money(m.expense_cents)}</b>`;
-    tip.hidden = false;
-    const cx = pad.l + slot * (Number(h.dataset.i) + 0.5);
-    tip.style.left = `${Math.min(w - tip.offsetWidth, Math.max(0, cx - tip.offsetWidth / 2))}px`;
-  }));
+  container.querySelectorAll(".hit").forEach((h) => h.addEventListener("click", () => onPick(Number(h.dataset.i))));
 }
 
 // ----- wiring -----
@@ -324,5 +334,10 @@ $("#file2").addEventListener("change", (e) => e.target.files[0] && openFile(e.ta
 $("#unlock").addEventListener("submit", unlock);
 $("#lock").addEventListener("click", lock);
 for (const b of document.querySelectorAll("nav button")) b.addEventListener("click", () => { view = b.dataset.view; render(); });
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js");
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js");
+  // A new version took over (sw.js claims open pages): reload once so its files are the ones running.
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded && navigator.serviceWorker.controller) { reloaded = true; location.reload(); } });
+}
 start().catch((e) => { alert(e.message); show("open"); });

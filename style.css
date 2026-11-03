@@ -60,6 +60,13 @@ nav button[aria-current="true"] { color: var(--accent); box-shadow: inset 0 2px 
 .list .amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .list small { display: block; color: var(--muted); font-size: 12px; }
 .list .amt.in { color: var(--good); }
+.list .amt.out { color: var(--critical); }
+.list li.pick { cursor: pointer; }
+.list li.chosen .name { font-weight: 700; }
+.list li.chosen { box-shadow: inset 3px 0 0 var(--accent); padding-left: 10px; margin-left: -10px; }
+.picker { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.picker h2 { flex: 1; justify-content: center; margin: 0; font-size: 15px; color: var(--text); text-transform: none; letter-spacing: 0; }
+.picker .button { min-width: 44px; font-size: 18px; line-height: 1; }
 
 /* FI progress with milestone ticks */
 .progress { position: relative; height: 10px; margin: 26px 0 4px; background: var(--raised); border-radius: 5px; }
@@ -71,6 +78,7 @@ nav button[aria-current="true"] { color: var(--accent); box-shadow: inset 0 2px 
 /* charts */
 .chart { position: relative; margin-top: 8px; touch-action: pan-y; }
 .chart svg { display: block; overflow: visible; }
+.hit { cursor: pointer; }
 .grid { stroke: var(--border); stroke-width: 1; }
 .axis { fill: var(--muted); font-size: 11px; }
 .line { fill: none; stroke: var(--line); stroke-width: 2; stroke-linejoin: round; }
@@ -79,6 +87,8 @@ nav button[aria-current="true"] { color: var(--accent); box-shadow: inset 0 2px 
 .dot { fill: var(--line); stroke: var(--card); stroke-width: 2; }
 .income { fill: var(--income); }
 .expense { fill: var(--expense); }
+.dim { opacity: .4; }
+.axis.chosen { fill: var(--text); font-weight: 700; }
 .hit { fill: transparent; }
 .tip { position: absolute; top: -6px; transform: translateY(-100%); padding: 6px 10px; background: #333431; border: 1px solid var(--control);
   border-radius: 8px; font-size: 12px; color: var(--text2); pointer-events: none; white-space: nowrap; }

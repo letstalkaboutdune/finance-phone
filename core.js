@@ -108,3 +108,17 @@ export function monthName(ym) {
 export function pct(v, digits = 0) {
   return v == null ? "–" : `${v < 0 ? "−" : ""}${Math.abs(v * 100).toFixed(digits)}%`;
 }
+
+// Round axis ticks covering lo..hi: the first at or below lo, the last at or above hi, so nothing is drawn
+// outside the plot.
+export function niceTicks(lo, hi, count = 3) {
+  if (hi <= lo) hi = lo + 1;
+  const step0 = (hi - lo) / count, mag = 10 ** Math.floor(Math.log10(step0));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= step0);
+  const ticks = [];
+  for (let v = Math.floor(lo / step) * step; ; v += step) {
+    ticks.push(Math.round(v * 1e6) / 1e6);
+    if (v >= hi) break;
+  }
+  return ticks;
+}
