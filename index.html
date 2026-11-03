@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#173a28">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'">
+<title>Finance</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="open" hidden>
+  <img src="icon.svg" alt="" width="72" height="72">
+  <h1>Finance</h1>
+  <p class="muted">Open the <b>finance-snapshot.json</b> file the desktop app writes to your Syncthing folder.
+    It stays encrypted on this phone; nothing is sent anywhere.</p>
+  <label class="button primary">Open snapshot<input id="file" type="file" accept="application/json,.json" hidden></label>
+</main>
+
+<main id="unlock-screen">
+  <form id="unlock" hidden>
+    <img src="icon.svg" alt="" width="72" height="72">
+    <h1>Finance</h1>
+    <label>Passphrase<input id="passphrase" type="password" autocomplete="current-password" required></label>
+    <label class="check"><input id="remember" type="checkbox" checked> Remember on this phone</label>
+    <p id="unlock-error" class="critical" role="alert"></p>
+    <button class="button primary" type="submit">Unlock</button>
+  </form>
+</main>
+
+<div id="main" hidden>
+  <header>
+    <h1 id="title">Finance</h1>
+    <label class="button small" title="Open a newer snapshot">Update<input id="file2" type="file" accept="application/json,.json" hidden></label>
+    <button id="lock" class="button small" type="button" title="Lock, and forget the key on this phone">Lock</button>
+  </header>
+  <div id="view"></div>
+  <nav>
+    <button data-view="today">Today</button>
+    <button data-view="forecast">Forecast</button>
+    <button data-view="wealth">Wealth</button>
+    <button data-view="months">Months</button>
+  </nav>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
