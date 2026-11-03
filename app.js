@@ -286,11 +286,20 @@ function lineChart(container, points, { min = null, height = 200 } = {}) {
     }
     lastMonth = m;
   });
-  if (min != null) svg += `<line class="min" x1="${pad.l}" x2="${w - pad.r}" y1="${y(min)}" y2="${y(min)}"/><text class="axis" x="${w - pad.r}" y="${y(min) - 4}" text-anchor="end">Minimum</text>`;
+  if (min != null) svg += `<line class="min" x1="${pad.l}" x2="${w - pad.r}" y1="${y(min)}" y2="${y(min)}"/>`;
   svg += `<path class="line" d="${points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join("")}"/>`;
+  // The minimum's label sits in a pill over the line, so the line can't hide it.
+  if (min != null) svg += `<g class="min-label"><rect rx="4"/><text x="${w - pad.r - 6}" y="${y(min)}" dy="0.35em" text-anchor="end">Min ${shortMoney(min)}</text></g>`;
   svg += `<line class="cross" style="display:none" y1="${pad.t}" y2="${height - pad.b}"/><circle class="dot" r="4" style="display:none"/></svg>`;
   container.innerHTML = svg;
   const el = container.querySelector("svg"), cross = el.querySelector(".cross"), dot = el.querySelector(".dot"), tip = tooltip(container);
+  const label = el.querySelector(".min-label");
+  if (label) {
+    const b = label.querySelector("text").getBBox(), r = label.querySelector("rect");
+    const top = Math.max(pad.t, Math.min(height - pad.b - b.height - 4, b.y - 2));     // kept inside the plot
+    label.querySelector("text").setAttribute("y", top + 2 + (y(min) - b.y));
+    Object.entries({ x: b.x - 6, y: top, width: b.width + 12, height: b.height + 4 }).forEach(([k, v]) => r.setAttribute(k, v));
+  }
   const move = (ev) => {
     const r = el.getBoundingClientRect();
     const i = Math.max(0, Math.min(points.length - 1, Math.round(((ev.clientX - r.left - pad.l) / (w - pad.l - pad.r)) * (points.length - 1))));

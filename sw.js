@@ -1,7 +1,7 @@
 // Keeps the page's own files for offline use. The snapshot itself lives in IndexedDB, not here.
 // Network first, so a published change shows on the next open; the cached copy when offline.
 // Bump VERSION when any file changes: the changed sw.js is what makes phones install the new version.
-const VERSION = "finance-v3";
+const VERSION = "finance-v4";
 const FILES = ["./", "index.html", "app.js", "core.js", "style.css", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
