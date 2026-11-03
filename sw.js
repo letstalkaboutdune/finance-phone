@@ -3,7 +3,7 @@
 // checks with the server ("no-cache"): GitHub Pages lets browsers reuse files for 10 minutes otherwise, which
 // kept serving the old page after a publish.
 // Bump VERSION when any file changes: the changed sw.js is what makes phones install the new version.
-const VERSION = "finance-v6";
+const VERSION = "finance-v7";
 const FILES = ["./", "index.html", "app.js", "core.js", "style.css", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => e.waitUntil(

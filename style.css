@@ -2,7 +2,7 @@
 :root {
   --page: #161716; --card: #222322; --raised: #2a2b29; --border: #2f302d; --control: #4a4b47;
   --text: #f0efec; --text2: #c4c2bc; --muted: #92908a; --sidebar: #173a28; --accent: #3fa36d; --primary: #2e7d52;
-  --critical: #e05a5a; --good: #3fbf6a; --warning: #fab219;
+  --critical: #ef6b6b; --good: #4cc777; --warning: #fab219;
   --line: #3987e5; --income: #199e70; --expense: #d95926;
   color-scheme: dark;
 }
